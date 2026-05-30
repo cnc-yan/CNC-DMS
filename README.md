@@ -1,2 +1,2 @@
-# CNC-AMS
-CNC - Apartment Management System
+# CNC-DMS
+CNC - Dormitory Management System
