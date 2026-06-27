@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.cnc.dms.mapper.ImportLogMapper">
+
+    <sql id="baseColumns">
+        id, file_name, import_type, total_count, success_count, error_count,
+        error_details, import_status, operator_id, version,
+        create_by, create_time, update_by, update_time
+    </sql>
+
+    <select id="findById" resultType="com.cnc.dms.entity.ImportLog">
+        SELECT <include refid="baseColumns"/>
+        FROM tbl_import_log
+        WHERE id = #{id}
+    </select>
+
+    <select id="findAll" resultType="com.cnc.dms.entity.ImportLog">
+        SELECT <include refid="baseColumns"/>
+        FROM tbl_import_log
+        <where>
+            <if test="importType != null and importType != ''">
+                AND import_type = #{importType}
+            </if>
+            <if test="importStatus != null">
+                AND import_status = #{importStatus}
+            </if>
+        </where>
+        ORDER BY create_time DESC
+        <if test="offset != null and limit != null">
+            LIMIT #{offset}, #{limit}
+        </if>
+    </select>
+
+    <select id="countByCondition" resultType="java.lang.Long">
+        SELECT COUNT(*) FROM tbl_import_log
+        <where>
+            <if test="importType != null and importType != ''">
+                AND import_type = #{importType}
+            </if>
+            <if test="importStatus != null">
+                AND import_status = #{importStatus}
+            </if>
+        </where>
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO tbl_import_log (
+            file_name, import_type, total_count, success_count, error_count,
+            error_details, import_status, operator_id, version,
+            create_by, create_time
+        ) VALUES (
+            #{fileName}, #{importType}, #{totalCount}, #{successCount}, #{errorCount},
+            #{errorDetails}, #{importStatus}, #{operatorId}, 0,
+            #{createBy}, NOW()
+        )
+    </insert>
+
+    <update id="update">
+        UPDATE tbl_import_log
+        <set>
+            <if test="totalCount != null">total_count = #{totalCount},</if>
+            <if test="successCount != null">success_count = #{successCount},</if>
+            <if test="errorCount != null">error_count = #{errorCount},</if>
+            <if test="errorDetails != null">error_details = #{errorDetails},</if>
+            <if test="importStatus != null">import_status = #{importStatus},</if>
+            version = version + 1,
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            update_time = NOW()
+        </set>
+        WHERE id = #{id} AND version = #{version}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM tbl_import_log WHERE id = #{id}
+    </delete>
+</mapper>
