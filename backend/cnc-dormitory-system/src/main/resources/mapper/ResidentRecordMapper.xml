@@ -1,0 +1,197 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.cnc.dms.mapper.ResidentRecordMapper">
+
+    <sql id="baseColumns">
+        rr.id,
+        rr.employee_id,
+        rr.room_id,
+        rr.checkin_date,
+        rr.planned_checkout_date,
+        rr.checkout_date,
+        rr.is_active,
+        rr.notes,
+        rr.total_fee,
+        rr.status,
+        rr.version,
+        rr.create_by,
+        rr.create_time,
+        rr.update_by,
+        rr.update_time,
+        r.room_number AS roomNumber,
+        r.dormitory_id AS dormitoryId,
+        r.daily_rate AS dailyRate,
+        d.dorm_name AS dormName,
+        e.emp_name AS empName,
+        e.emp_no AS empNo
+    </sql>
+
+    <sql id="joinTables">
+        FROM tbl_resident_record rr
+        LEFT JOIN tbl_room r ON rr.room_id = r.id
+        LEFT JOIN tbl_dormitory d ON r.dormitory_id = d.id
+        LEFT JOIN tbl_employee e ON rr.employee_id = e.id
+    </sql>
+
+    <select id="findById" resultType="com.cnc.dms.entity.ResidentRecord">
+        SELECT <include refid="baseColumns"/>
+        <include refid="joinTables"/>
+        WHERE rr.id = #{id}
+    </select>
+
+    <select id="findActiveByEmployeeId" resultType="com.cnc.dms.entity.ResidentRecord">
+        SELECT <include refid="baseColumns"/>
+        <include refid="joinTables"/>
+        WHERE rr.employee_id = #{employeeId}
+          AND rr.is_active = 1
+        ORDER BY rr.checkin_date DESC
+    </select>
+
+    <select id="findByDormitoryAndDateRange" resultType="com.cnc.dms.entity.ResidentRecord">
+        SELECT <include refid="baseColumns"/>
+        <include refid="joinTables"/>
+        WHERE r.dormitory_id = #{dormitoryId}
+          AND rr.is_active = 1
+          AND rr.checkin_date &lt;= #{endDate}
+          AND (rr.checkout_date IS NULL OR rr.checkout_date &gt;= #{startDate})
+        ORDER BY r.room_number ASC, rr.checkin_date ASC
+    </select>
+
+    <select id="findOverlapRecords" resultType="com.cnc.dms.entity.ResidentRecord">
+        SELECT <include refid="baseColumns"/>
+        <include refid="joinTables"/>
+        WHERE rr.room_id = #{roomId}
+          AND rr.is_active = 1
+          AND #{checkinDate} &lt;= COALESCE(rr.checkout_date, rr.planned_checkout_date, '9999-12-31')
+          AND COALESCE(#{checkoutDate}, '9999-12-31') &gt;= rr.checkin_date
+    </select>
+
+    <select id="findAll" resultType="com.cnc.dms.entity.ResidentRecord">
+        SELECT <include refid="baseColumns"/>
+        <include refid="joinTables"/>
+        <where>
+            <if test="employeeId != null">
+                AND rr.employee_id = #{employeeId}
+            </if>
+            <if test="roomId != null">
+                AND rr.room_id = #{roomId}
+            </if>
+            <if test="isActive != null">
+                AND rr.is_active = #{isActive}
+            </if>
+        </where>
+        ORDER BY rr.checkin_date DESC
+        <if test="offset != null and limit != null">
+            LIMIT #{offset}, #{limit}
+        </if>
+    </select>
+
+    <select id="countByCondition" resultType="java.lang.Long">
+        SELECT COUNT(*)
+        <include refid="joinTables"/>
+        <where>
+            <if test="employeeId != null">
+                AND rr.employee_id = #{employeeId}
+            </if>
+            <if test="roomId != null">
+                AND rr.room_id = #{roomId}
+            </if>
+            <if test="isActive != null">
+                AND rr.is_active = #{isActive}
+            </if>
+        </where>
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO tbl_resident_record (
+            employee_id, room_id, checkin_date, planned_checkout_date, checkout_date,
+            is_active, notes, total_fee, status, version, create_by, create_time
+        ) VALUES (
+            #{employeeId}, #{roomId}, #{checkinDate}, #{plannedCheckoutDate}, #{checkoutDate},
+            COALESCE(#{isActive}, 1), #{notes}, #{totalFee},
+            COALESCE(#{status}, 'CHECKED_IN'), 0, #{createBy}, NOW()
+        )
+    </insert>
+
+    <update id="update">
+        UPDATE tbl_resident_record
+        <set>
+            <if test="employeeId != null">
+                employee_id = #{employeeId},
+            </if>
+            <if test="roomId != null">
+                room_id = #{roomId},
+            </if>
+            <if test="checkinDate != null">
+                checkin_date = #{checkinDate},
+            </if>
+            <if test="plannedCheckoutDate != null">
+                planned_checkout_date = #{plannedCheckoutDate},
+            </if>
+            <if test="checkoutDate != null">
+                checkout_date = #{checkoutDate},
+            </if>
+            <if test="isActive != null">
+                is_active = #{isActive},
+            </if>
+            <if test="notes != null">
+                notes = #{notes},
+            </if>
+            <if test="totalFee != null">
+                total_fee = #{totalFee},
+            </if>
+            <if test="status != null">
+                status = #{status},
+            </if>
+            version = version + 1,
+            <if test="updateBy != null and updateBy != ''">
+                update_by = #{updateBy},
+            </if>
+            update_time = NOW()
+        </set>
+        WHERE id = #{id} AND version = #{version}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM tbl_resident_record WHERE id = #{id}
+    </delete>
+
+    <!-- 利用料金確認一覧：社員名・部屋情報・日額をJOIN -->
+    <select id="findUsageFees" resultType="com.cnc.dms.entity.ResidentRecord">
+        SELECT
+            rr.id, rr.employee_id, rr.room_id,
+            rr.checkin_date, rr.planned_checkout_date, rr.checkout_date,
+            rr.is_active, rr.notes, rr.total_fee,
+            rr.status, rr.version,
+            rr.create_by, rr.create_time, rr.update_by, rr.update_time,
+            r.room_number AS roomNumber, r.dormitory_id AS dormitoryId,
+            d.dorm_name AS dormName,
+            r.daily_rate,
+            e.emp_name AS empName, e.emp_no AS empNo
+        FROM tbl_resident_record rr
+        LEFT JOIN tbl_room r ON rr.room_id = r.id
+        LEFT JOIN tbl_dormitory d ON r.dormitory_id = d.id
+        LEFT JOIN tbl_employee e ON rr.employee_id = e.id
+        ORDER BY rr.checkin_date DESC, rr.id DESC
+    </select>
+
+    <select id="countActive" resultType="java.lang.Long">
+        SELECT COUNT(*) FROM tbl_resident_record WHERE is_active = 1
+    </select>
+
+    <select id="countTotalRecords" resultType="java.lang.Long">
+        SELECT COUNT(*) FROM tbl_resident_record
+    </select>
+
+    <select id="countEmployeesWithoutResident" resultType="java.lang.Long">
+        SELECT COUNT(*) FROM tbl_employee e
+        WHERE NOT EXISTS (
+            SELECT 1 FROM tbl_resident_record r
+            WHERE r.employee_id = e.id
+        )
+    </select>
+
+</mapper>

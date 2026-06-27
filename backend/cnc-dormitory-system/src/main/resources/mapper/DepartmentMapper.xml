@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.cnc.dms.mapper.DepartmentMapper">
+
+    <sql id="baseColumns">
+        id,
+        dept_code,
+        dept_name,
+        region,
+        parent_id,
+        sort_order,
+        status,
+        version,
+        create_by,
+        create_time,
+        update_by,
+        update_time
+    </sql>
+
+    <select id="findById" resultType="com.cnc.dms.entity.Department">
+        SELECT <include refid="baseColumns"/>
+        FROM tbl_department
+        WHERE id = #{id}
+    </select>
+
+    <select id="findByDeptCode" resultType="com.cnc.dms.entity.Department">
+        SELECT <include refid="baseColumns"/>
+        FROM tbl_department
+        WHERE dept_code = #{deptCode}
+    </select>
+
+    <select id="findAll" resultType="com.cnc.dms.entity.Department">
+        SELECT <include refid="baseColumns"/>
+        FROM tbl_department
+        <where>
+            <if test="deptCode != null and deptCode != ''">
+                AND dept_code LIKE CONCAT('%', #{deptCode}, '%')
+            </if>
+            <if test="deptName != null and deptName != ''">
+                AND dept_name LIKE CONCAT('%', #{deptName}, '%')
+            </if>
+            <if test="region != null and region != ''">
+                AND region = #{region}
+            </if>
+            <if test="status != null">
+                AND status = #{status}
+            </if>
+        </where>
+        ORDER BY sort_order ASC, id ASC
+        <if test="offset != null and limit != null">
+            LIMIT #{offset}, #{limit}
+        </if>
+    </select>
+
+    <select id="countByCondition" resultType="java.lang.Long">
+        SELECT COUNT(*) FROM tbl_department
+        <where>
+            <if test="deptCode != null and deptCode != ''">
+                AND dept_code LIKE CONCAT('%', #{deptCode}, '%')
+            </if>
+            <if test="deptName != null and deptName != ''">
+                AND dept_name LIKE CONCAT('%', #{deptName}, '%')
+            </if>
+            <if test="region != null and region != ''">
+                AND region = #{region}
+            </if>
+            <if test="status != null">
+                AND status = #{status}
+            </if>
+        </where>
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO tbl_department (
+            dept_code, dept_name, region, parent_id, sort_order,
+            status, version, create_by, create_time
+        ) VALUES (
+            #{deptCode}, #{deptName}, #{region}, #{parentId}, #{sortOrder},
+            COALESCE(#{status}, 1), 0, #{createBy}, NOW()
+        )
+    </insert>
+
+    <update id="update">
+        UPDATE tbl_department
+        <set>
+            <if test="deptName != null and deptName != ''">
+                dept_name = #{deptName},
+            </if>
+            <if test="region != null">
+                region = #{region},
+            </if>
+            <if test="parentId != null">
+                parent_id = #{parentId},
+            </if>
+            <if test="sortOrder != null">
+                sort_order = #{sortOrder},
+            </if>
+            <if test="status != null">
+                status = #{status},
+            </if>
+            version = version + 1,
+            <if test="updateBy != null and updateBy != ''">
+                update_by = #{updateBy},
+            </if>
+            update_time = NOW()
+        </set>
+        WHERE id = #{id} AND version = #{version}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM tbl_department WHERE id = #{id}
+    </delete>
+
+</mapper>

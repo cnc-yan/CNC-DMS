@@ -1,0 +1,35 @@
+spring:
+  profiles:
+    active: test
+
+  datasource:
+    url: jdbc:h2:mem:cncdms_test;MODE=MySQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:db/schema.sql
+
+mybatis:
+  mapper-locations: classpath:mapper/*.xml
+  type-aliases-package: com.cnc.dms.entity
+
+app:
+  cors:
+    allowed-origins:
+      - http://localhost:5173
+  security:
+    permit-all-paths:
+      - /api/auth/**
+      - /test/**
+
+jwt:
+  secret: cnc-dormitory-system-jwt-secret-key-2026-test
+  expiration: 86400000
+
+logging:
+  level:
+    com.cnc.dms.mapper: debug

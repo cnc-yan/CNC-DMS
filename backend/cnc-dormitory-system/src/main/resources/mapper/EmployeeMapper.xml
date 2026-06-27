@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.cnc.dms.mapper.EmployeeMapper">
+
+    <sql id="baseColumns">
+        e.id,
+        e.emp_no,
+        e.emp_name,
+        e.gender,
+        e.nationality,
+        e.dept_id,
+        e.first_use_date,
+        e.phone,
+        e.email,
+        e.hire_date,
+        e.resign_date,
+        e.emp_status,
+        e.version,
+        e.create_by,
+        e.create_time,
+        e.update_by,
+        e.update_time,
+        d.dept_name AS deptName
+    </sql>
+
+    <sql id="joinTables">
+        FROM tbl_employee e
+        LEFT JOIN tbl_department d ON e.dept_id = d.id
+    </sql>
+
+    <select id="findById" resultType="com.cnc.dms.entity.Employee">
+        SELECT <include refid="baseColumns"/>
+        <include refid="joinTables"/>
+        WHERE e.id = #{id}
+    </select>
+
+    <select id="findByEmpNo" resultType="com.cnc.dms.entity.Employee">
+        SELECT <include refid="baseColumns"/>
+        <include refid="joinTables"/>
+        WHERE e.emp_no = #{empNo}
+    </select>
+
+    <select id="findAll" resultType="com.cnc.dms.entity.Employee">
+        SELECT <include refid="baseColumns"/>
+        <include refid="joinTables"/>
+        <where>
+            <if test="empNo != null and empNo != ''">
+                AND e.emp_no LIKE CONCAT('%', #{empNo}, '%')
+            </if>
+            <if test="empName != null and empName != ''">
+                AND e.emp_name LIKE CONCAT('%', #{empName}, '%')
+            </if>
+            <if test="deptId != null">
+                AND e.dept_id = #{deptId}
+            </if>
+            <if test="empStatus != null">
+                AND e.emp_status = #{empStatus}
+            </if>
+        </where>
+        ORDER BY e.emp_no ASC
+        <if test="offset != null and limit != null">
+            LIMIT #{offset}, #{limit}
+        </if>
+    </select>
+
+    <select id="countByCondition" resultType="java.lang.Long">
+        SELECT COUNT(*)
+        <include refid="joinTables"/>
+        <where>
+            <if test="empNo != null and empNo != ''">
+                AND e.emp_no LIKE CONCAT('%', #{empNo}, '%')
+            </if>
+            <if test="empName != null and empName != ''">
+                AND e.emp_name LIKE CONCAT('%', #{empName}, '%')
+            </if>
+            <if test="deptId != null">
+                AND e.dept_id = #{deptId}
+            </if>
+            <if test="empStatus != null">
+                AND e.emp_status = #{empStatus}
+            </if>
+        </where>
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO tbl_employee (
+            emp_no, emp_name, gender, nationality, dept_id,
+            first_use_date, phone, email, hire_date,
+            emp_status, version, create_by, create_time
+        ) VALUES (
+            #{empNo}, #{empName},
+            COALESCE(#{gender}, 'MALE'),
+            COALESCE(#{nationality}, '中国'),
+            #{deptId},
+            #{firstUseDate}, #{phone}, #{email}, #{hireDate},
+            COALESCE(#{empStatus}, 1), 0, #{createBy}, NOW()
+        )
+    </insert>
+
+    <update id="update">
+        UPDATE tbl_employee
+        <set>
+            <if test="empName != null and empName != ''">
+                emp_name = #{empName},
+            </if>
+            <if test="gender != null and gender != ''">
+                gender = #{gender},
+            </if>
+            <if test="nationality != null and nationality != ''">
+                nationality = #{nationality},
+            </if>
+            <if test="deptId != null">
+                dept_id = #{deptId},
+            </if>
+            <if test="firstUseDate != null">
+                first_use_date = #{firstUseDate},
+            </if>
+            <if test="phone != null">
+                phone = #{phone},
+            </if>
+            <if test="email != null">
+                email = #{email},
+            </if>
+            <if test="hireDate != null">
+                hire_date = #{hireDate},
+            </if>
+            <if test="resignDate != null">
+                resign_date = #{resignDate},
+            </if>
+            <if test="empStatus != null">
+                emp_status = #{empStatus},
+            </if>
+            version = version + 1,
+            <if test="updateBy != null and updateBy != ''">
+                update_by = #{updateBy},
+            </if>
+            update_time = NOW()
+        </set>
+        WHERE id = #{id} AND version = #{version}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM tbl_employee WHERE id = #{id}
+    </delete>
+
+</mapper>

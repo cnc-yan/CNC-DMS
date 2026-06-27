@@ -1,0 +1,183 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.cnc.dms.mapper.RoomMapper">
+
+    <sql id="baseColumns">
+        r.id,
+        r.dormitory_id,
+        r.room_number,
+        r.capacity,
+        r.current_occupancy,
+        r.daily_rate,
+        r.room_type,
+        r.ac_type,
+        r.memo1,
+        r.memo2,
+        r.memo3,
+        r.status,
+        r.version,
+        r.create_by,
+        r.create_time,
+        r.update_by,
+        r.update_time,
+        d.dorm_name AS dormName
+    </sql>
+
+    <sql id="joinTables">
+        FROM tbl_room r
+        LEFT JOIN tbl_dormitory d ON r.dormitory_id = d.id
+    </sql>
+
+    <select id="findById" resultType="com.cnc.dms.entity.Room">
+        SELECT <include refid="baseColumns"/>
+        <include refid="joinTables"/>
+        WHERE r.id = #{id}
+    </select>
+
+    <select id="findByDormitoryId" resultType="com.cnc.dms.entity.Room">
+        SELECT <include refid="baseColumns"/>
+        <include refid="joinTables"/>
+        WHERE r.dormitory_id = #{dormitoryId}
+        ORDER BY r.room_number ASC
+    </select>
+
+    <!-- 空き室検索（status=1(空室) かつ current_occupancy < capacity） -->
+    <select id="findVacantRooms" resultType="com.cnc.dms.entity.Room">
+        SELECT r.id, r.dormitory_id, r.room_number, r.capacity,
+               r.current_occupancy, r.daily_rate,
+               r.room_type, r.ac_type, r.memo1, r.memo2, r.memo3,
+               r.status,
+               r.version, r.create_by, r.create_time, r.update_by, r.update_time,
+               d.dorm_name, d.dorm_condition, d.region
+        FROM tbl_room r
+        LEFT JOIN tbl_dormitory d ON r.dormitory_id = d.id
+        WHERE r.status = 1
+          AND r.current_occupancy &lt; r.capacity
+        <if test="dormitoryId != null">
+            AND r.dormitory_id = #{dormitoryId}
+        </if>
+        <if test="gender != null and gender != 'ANY'">
+            AND (d.dorm_condition = #{gender} OR d.dorm_condition = 'ANY')
+        </if>
+        ORDER BY d.region ASC, d.dorm_name ASC, r.room_number ASC
+        <if test="offset != null and limit != null">
+            LIMIT #{offset}, #{limit}
+        </if>
+    </select>
+
+    <select id="countVacantRooms" resultType="java.lang.Long">
+        SELECT COUNT(*)
+        FROM tbl_room r
+        LEFT JOIN tbl_dormitory d ON r.dormitory_id = d.id
+        WHERE r.status = 1
+          AND r.current_occupancy &lt; r.capacity
+        <if test="dormitoryId != null">
+            AND r.dormitory_id = #{dormitoryId}
+        </if>
+        <if test="gender != null and gender != 'ANY'">
+            AND (d.dorm_condition = #{gender} OR d.dorm_condition = 'ANY')
+        </if>
+    </select>
+
+    <select id="findAll" resultType="com.cnc.dms.entity.Room">
+        SELECT <include refid="baseColumns"/>
+        <include refid="joinTables"/>
+        <where>
+            <if test="dormitoryId != null">
+                AND r.dormitory_id = #{dormitoryId}
+            </if>
+            <if test="roomNumber != null and roomNumber != ''">
+                AND r.room_number = #{roomNumber}
+            </if>
+            <if test="status != null">
+                AND r.status = #{status}
+            </if>
+        </where>
+        ORDER BY r.dormitory_id ASC, r.room_number ASC
+        <if test="offset != null and limit != null">
+            LIMIT #{offset}, #{limit}
+        </if>
+    </select>
+
+    <select id="countByCondition" resultType="java.lang.Long">
+        SELECT COUNT(*)
+        <include refid="joinTables"/>
+        <where>
+            <if test="dormitoryId != null">
+                AND r.dormitory_id = #{dormitoryId}
+            </if>
+            <if test="roomNumber != null and roomNumber != ''">
+                AND r.room_number = #{roomNumber}
+            </if>
+            <if test="status != null">
+                AND r.status = #{status}
+            </if>
+        </where>
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO tbl_room (
+            dormitory_id, room_number, capacity,
+            current_occupancy, daily_rate,
+            room_type, ac_type, memo1, memo2, memo3,
+            status,
+            version, create_by, create_time
+        ) VALUES (
+            #{dormitoryId}, #{roomNumber}, #{capacity},
+            COALESCE(#{currentOccupancy}, 0), #{dailyRate},
+            #{roomType}, #{acType}, #{memo1}, #{memo2}, #{memo3},
+            COALESCE(#{status}, 1),
+            0, #{createBy}, NOW()
+        )
+    </insert>
+
+    <update id="update">
+        UPDATE tbl_room
+        <set>
+            <if test="roomNumber != null and roomNumber != ''">
+                room_number = #{roomNumber},
+            </if>
+            <if test="capacity != null">
+                capacity = #{capacity},
+            </if>
+            <if test="currentOccupancy != null">
+                current_occupancy = #{currentOccupancy},
+            </if>
+            <if test="dailyRate != null">
+                daily_rate = #{dailyRate},
+            </if>
+            <if test="roomType != null">
+                room_type = #{roomType},
+            </if>
+            <if test="acType != null">
+                ac_type = #{acType},
+            </if>
+            <if test="memo1 != null">
+                memo1 = #{memo1},
+            </if>
+            <if test="memo2 != null">
+                memo2 = #{memo2},
+            </if>
+            <if test="memo3 != null">
+                memo3 = #{memo3},
+            </if>
+            <if test="status != null">
+                status = #{status},
+            </if>
+            version = version + 1,
+            <if test="updateBy != null and updateBy != ''">
+                update_by = #{updateBy},
+            </if>
+            update_time = NOW()
+        </set>
+        WHERE id = #{id} AND version = #{version}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM tbl_room WHERE id = #{id}
+    </delete>
+
+</mapper>
