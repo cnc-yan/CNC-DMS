@@ -1,0 +1,28 @@
+spring:
+  application:
+    name: cnc-dormitory-system
+  profiles:
+    active: @spring.profiles.active@
+
+mybatis:
+  mapper-locations: classpath:mapper/*.xml
+  type-aliases-package: com.cnc.dms.entity
+  configuration:
+    map-underscore-to-camel-case: true
+
+logging:
+  level:
+    com.cnc.dms.mapper: debug
+
+app:
+  cors:
+    allowed-origins:
+      - http://localhost:5173
+  security:
+    permit-all-paths:
+      - /api/auth/**
+      - /test/**
+
+jwt:
+  secret: cnc-dormitory-system-jwt-secret-key-2026-default
+  expiration: 86400000
