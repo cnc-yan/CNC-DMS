@@ -1,0 +1,8 @@
+name = "cnc-dms"
+compatibility_date = "2026-06-27"
+
+# Vue.js SPAのビルド出力先
+[assets]
+directory = "./frontend/cnc-dms-ui/dist"
+# SPAのクライアントサイドルーティング対応
+not_found_handling = "single-page-application"
